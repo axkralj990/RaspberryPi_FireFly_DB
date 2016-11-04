@@ -3,6 +3,8 @@ import time
 import timeit
 import threading
 import sys
+import json
+from datetime import datetime
 
 global devices
 global continuousRead
@@ -84,6 +86,10 @@ class myThread(threading.Thread):
         print("Thread started!")
         loopRead(self.threadID, self.device)
         print("Thread ended!")
+
+def write2File(telemetryData):
+    with open('telemetry.json','a') as outfile:
+        json.dump(telemetryData, outfile)
 
 def loopRead(thread, device):
     print("loopRead function")
@@ -210,6 +216,10 @@ def publishData(data):
     sendData = ("{\"d\": {\"ID\":\"FF-%c%c%c\",\"gX\":%.2f,\"gY\":%.2f,\"gZ\":%.2f,\"aX\":%.2f,\"aY\":%.2f,\"aZ\":%.2f,\"mX\":%d,\"mY\":%d,\"mZ\":%d,\"Lux\": %d, \"Temp\": %.1f,\"RelHum\" :%.1f, \"Analog\":%d}}" % (data[0],data[1], data[2], gx, gy, gz, a1x, a1y, a1z, mx, my, mz, lux, temp, humid, analog))
     print("SEND DATA")
     print(sendData)
+    device_name = ("FF-%c%c%c" %(data[0],data[1], data[2]))
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    telemetryData = {'timestamp': timestamp, 'ID': device_name,'gyro_X': gx, 'gyro_Y': gy, 'gyro_Z': gz, 'accel_X': a1x, 'accel_Y': a1y, 'accel_Z': a1z, 'mag_X': mx, 'mag_Y': my, 'mag_Z': mz, 'lux': lux, 'temp': temp, 'humid': humid, 'analog': analog}
+    write2File(telemetryData)
 
 try:
     adapter = pygatt.backends.GATTToolBackend()
