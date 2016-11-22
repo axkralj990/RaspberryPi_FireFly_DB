@@ -1,4 +1,5 @@
 import pygatt.backends
+import paho.mqtt.client as mqtt
 import time
 import timeit
 import threading
@@ -6,6 +7,7 @@ import sys
 import json
 from datetime import datetime
 
+global client
 global devices
 global continuousRead
 continuousRead = []
@@ -139,7 +141,7 @@ def loopRead(thread, device):
                 received = connection.char_read_hnd(24)
                 #print(received)
                 if(len(received) > 30):
-                    publishData(received)
+                    publishData(received,client)
                 error = 0
                 if(device.commandToSend == True):
                     try:
@@ -167,7 +169,19 @@ def loopRead(thread, device):
                 connection = None
             time.sleep(delay1)
 
-def publishData(data):
+# The callback for when the client receives a CONNACK response from the server.
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code "+str(rc))
+
+    # Subscribing in on_connect() means that if we lose the connection and
+    # reconnect then subscriptions will be renewed.
+    client.subscribe("FFcmd/#")
+
+# The callback for when a PUBLISH message is received from the server.
+def on_message(client, userdata, msg):
+    print(msg.topic+" "+str(msg.payload))
+
+def publishData(data,clientMQTT):
 
     g2x = (data[4] << 8) | (data[5])
     g2y = (data[6] << 8) | (data[7])
@@ -215,13 +229,19 @@ def publishData(data):
     
     sendData = ("{\"d\": {\"ID\":\"FF-%c%c%c\",\"gX\":%.2f,\"gY\":%.2f,\"gZ\":%.2f,\"aX\":%.2f,\"aY\":%.2f,\"aZ\":%.2f,\"mX\":%d,\"mY\":%d,\"mZ\":%d,\"Lux\": %d, \"Temp\": %.1f,\"RelHum\" :%.1f, \"Analog\":%d}}" % (data[0],data[1], data[2], gx, gy, gz, a1x, a1y, a1z, mx, my, mz, lux, temp, humid, analog))
     print("SEND DATA")
-    print(sendData)
-    device_name = ("FF-%c%c%c" %(data[0],data[1], data[2]))
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    telemetryData = {'timestamp': timestamp, 'ID': device_name,'gyro_X': gx, 'gyro_Y': gy, 'gyro_Z': gz, 'accel_X': a1x, 'accel_Y': a1y, 'accel_Z': a1z, 'mag_X': mx, 'mag_Y': my, 'mag_Z': mz, 'lux': lux, 'temp': temp, 'humid': humid, 'analog': analog}
+    clientMQTT.publish("FF",sendData)
+    #print(sendData)
+    #device_name = ("FF-%c%c%c" %(data[0],data[1], data[2]))
+    #timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #telemetryData = {'timestamp': timestamp, 'ID': device_name,'gyro_X': gx, 'gyro_Y': gy, 'gyro_Z': gz, 'accel_X': a1x, 'accel_Y': a1y, 'accel_Z': a1z, 'mag_X': mx, 'mag_Y': my, 'mag_Z': mz, 'lux': lux, 'temp': temp, 'humid': humid, 'analog': analog}
     #write2File(telemetryData)
 
 try:
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect("192.168.64.104",1883,60)
+
     adapter = pygatt.backends.GATTToolBackend()
     adapter.reset()
     adapter.start()
@@ -246,6 +266,10 @@ try:
                 print("Device count:")
                 print(t.device.deviceCount)
                 connect+=1
+    
+    while(True):
+        print("main")
+        client.loop_forever()
 
 #SHOULD BE A MULTILINE COMMENT
 #print("DEVICE 0 ADDRESS:")
