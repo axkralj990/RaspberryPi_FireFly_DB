@@ -45,9 +45,6 @@ class BLEdevice:
 
 def readChar(firefly,mac):
     received = firefly.char_read_hnd(24)
-    #print("=====THIS IS RECEIVED:")
-    #print(received)
-    #print("======================")
             
 def tryConnect(adapter2, mac):
 
@@ -227,14 +224,14 @@ def publishData(data,clientMQTT):
 
     analog = data[30]
     
-    sendData = ("{\"d\": {\"ID\":\"FF-%c%c%c\",\"gX\":%.2f,\"gY\":%.2f,\"gZ\":%.2f,\"aX\":%.2f,\"aY\":%.2f,\"aZ\":%.2f,\"mX\":%d,\"mY\":%d,\"mZ\":%d,\"Lux\": %d, \"Temp\": %.1f,\"RelHum\" :%.1f, \"Analog\":%d}}" % (data[0],data[1], data[2], gx, gy, gz, a1x, a1y, a1z, mx, my, mz, lux, temp, humid, analog))
-    print("SEND DATA")
-    clientMQTT.publish("FF",sendData)
-    #print(sendData)
-    #device_name = ("FF-%c%c%c" %(data[0],data[1], data[2]))
-    #timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #telemetryData = {'timestamp': timestamp, 'ID': device_name,'gyro_X': gx, 'gyro_Y': gy, 'gyro_Z': gz, 'accel_X': a1x, 'accel_Y': a1y, 'accel_Z': a1z, 'mag_X': mx, 'mag_Y': my, 'mag_Z': mz, 'lux': lux, 'temp': temp, 'humid': humid, 'analog': analog}
-    #write2File(telemetryData)
+    #sendData = ("{\"d\": {\"ID\":\"FF-%c%c%c\",\"gX\":%.2f,\"gY\":%.2f,\"gZ\":%.2f,\"aX\":%.2f,\"aY\":%.2f,\"aZ\":%.2f,\"mX\":%d,\"mY\":%d,\"mZ\":%d,\"Lux\": %d, \"Temp\": %.1f,\"RelHum\" :%.1f, \"Analog\":%d}}" % (data[0],data[1], data[2], gx, gy, gz, a1x, a1y, a1z, mx, my, mz, lux, temp, humid, analog))
+    device_name = ("FF-%c%c%c" %(data[0],data[1], data[2]))
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    telemetryData = {"timestamp": timestamp, "ID": device_name,"gyro_X": gx, "gyro_Y": gy, "gyro_Z": gz, "accel_X": a1x, "accel_Y": a1y, "accel_Z": a1z, "mag_X": mx, "mag_Y": my, "mag_Z": mz, "lux": lux, "temp": temp, "humid": humid, "analog": analog}
+    #testTelemetry = {"timestamp": timestamp, "ID": device_name}
+    telemetryData = str(telemetryData)
+    topicStr = "FFS/"+device_name
+    clientMQTT.publish(topicStr,str(telemetryData))
 
 try:
     client = mqtt.Client()
@@ -258,11 +255,11 @@ try:
                 print(devices[i]['address'])
                 print("FireFly name:")
                 print(devices[i]['name'][3:6])
-                device = BLEdevice(devices[i]['name'][3:6], devices[i]['address'], 0.5, '0001301')
+                device = BLEdevice(devices[i]['name'][3:6], devices[i]['address'], 5, '0001305')
                 t = myThread(device.deviceCount, device)
                 t.start()
                 continuousRead.append(t)
-                #print(continuousRead)
+                #print("reading")
                 print("Device count:")
                 print(t.device.deviceCount)
                 connect+=1
